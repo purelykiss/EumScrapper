@@ -1,0 +1,3 @@
+wkhtmltopdf_path=C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe
+kakao_rest_api_key=
+save_pdf_path=.\result
