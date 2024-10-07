@@ -230,7 +230,7 @@ def create_pnu_code(b_code, detail_addr):
 # 유효한 지번인지 확인하는 함수
 def validate_detail_address(detail_addr):
     # 지번의 형식이 유효한지 확인 (정규 표현식 예: 숫자-숫자)
-    pattern = r'^\d{1,5}(-\d{1,5})?$'
+    pattern = r'^(산)?\d{1,4}(-\d{1,4})?$'
     return bool(re.match(pattern, detail_addr))
 
 
