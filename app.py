@@ -57,7 +57,7 @@ def create_default_option_file():
 read_option_file()
 config = pdfkit.configuration(wkhtmltopdf=path_to_wkhtmltopdf)
 
-# URL 템플릿 (pnu 값만 바뀌는 형태)
+# 토지이음 URL 템플릿 (pnu 값만 바뀌는 형태)
 BASE_URL = "https://www.eum.go.kr/web/ar/lu/luLandDetPrintPop.jsp?isNoScr=script&s_type=1&p_type=select&p_type1=true&p_type2=true&p_type3=true&p_type4=true&p_type5=false&mode=search&pnu={}"
 
 # GET 요청을 보내는 함수 (PNU 기반)
@@ -119,8 +119,14 @@ def read_addresses_from_xls():
             # XLS 파일 읽기
             df = pd.read_excel(xls_file_path)
 
-            # 원래 행 번호 열 추가
-            df['원래 행 번호'] = df.index + 1  # 1부터 시작하는 인덱스
+            # 원래_행_번호 열 추가
+            df['원래_행_번호'] = df.index + 2    # 1부터 시작하는 인덱스
+
+                                               ## 2025/01/21
+                                               ## ==문제==
+                                               ## 열 번호가 실제보다 1 낮음
+                                               ## ==이전 코드==
+                                               ## df['원래 행 번호'] = df.index + 1
 
             # 필요한 열이 비어있는 경우 해당 행 삭제
             df = df.dropna(subset=['읍면동', '지번'], how='any')  # '읍면동' 또는 '지번'이 비어 있는 행 삭제
@@ -132,43 +138,99 @@ def read_addresses_from_xls():
 
             total_rows = len(df)
             success_count = 0
-            error_count = 0
-            errors = []  # 오류 정보를 저장할 리스트
+
+            ## 2025/01/21
+            ## ==문제==
+            ## 변수 이름 변경
+            ## ==이전 코드==
+            ## error_count = 0
+            ## errors = []  # 오류 정보를 저장할 리스트
+            log_count = 0
+            log_records = []  # 오류 정보를 저장할 리스트
 
             # 현재 시각을 기반으로 오류 로그 파일명 생성
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            log_filename = f"eum_error_log_{timestamp}.txt"
+            log_filename = f"eum_log_{timestamp}.txt"   ## 2025/01/21
+                                                        ## ==문제==
+                                                        ## 이름 변경
+                                                        ## ==이전 코드==
+                                                        ## log_filename = f"eum_error_log_{timestamp}.txt"
             log_file_path = os.path.join(save_directory, log_filename)
+
+            ## 중복된 주소 지우기
+            ###########################################################################
+            ## ==문제==
+            ## 중복된 주소를 지우고, 지운 경우 해당 행의 원래 행 번호 로그로 출력
+            ## ==이전 코드==
+            ## 새로운 코드 삽입
+            ###########################################################################
+            df, duplicate_log = delete_duplicate_df(df)
+            if(duplicate_log != str()):
+                log_records.append(duplicate_log)
+                # 문제 있던 ~를
+                total_rows = len(df)
 
             # 주소와 지번 정보 읽기
             for index, row in df.iterrows():
                 addr = row['읍면동']
-                detail_addr = row['지번']
-                original_row_number = row['원래 행 번호']
-
+                detail_addr = str(row['지번'])    ## 2025/01/21
+                                                 ## ==문제==
+                                                 ## 지번이 숫자인 경우 문제 발생, 해결하기 위해 str()함수 사용
+                                                 ## ==이전 코드==
+                                                 ## detail_addr = row['지번']
+                original_row_number = row['원래_행_번호']
+                print("test")
                 try:
                     # 각 주소와 지번에 대해 PDF 요청
+                    print(str(original_row_number) + " : " + "validate_detail_address")
                     if validate_detail_address(detail_addr):  # 지번 유효성 검사
+                        print(str(original_row_number) + " : " + "kakao_request")
                         b_code = kakao_request(addr, detail_addr)  # b_code 요청
                         if b_code:
+                            print(str(original_row_number) + " : " + "create_pnu_code")
                             pnu_code = create_pnu_code(b_code, detail_addr)  # PNU 코드 생성
+                            print(str(original_row_number) + " : " + "get_request")
                             get_request(pnu_code, save_directory)  # PDF 요청
                             success_count += 1  # 성공 카운트 증가
                 except Exception as e:
-                    error_count += 1  # 오류 카운트 증가
-                    errors.append(f"원래 행 번호: {original_row_number}, 메서드: {e.__class__.__name__}, 메시지: {str(e)}")
+                    print("err")
+                    log_count += 1  # 오류 카운트 증가
+                    log_records.append(f"원래 행 번호: {original_row_number}, 메서드: {e.__class__.__name__}, 메시지: {str(e)}")
 
             # 오류가 발생한 경우 로그 파일에 기록
-            if errors:
+            if log_records:
                 with open(log_file_path, 'w') as log_file:
-                    for error in errors:
+                    for error in log_records:
                         log_file.write(error + '\n')
 
             # 성공 및 실패 결과 출력
-            status_label.config(text=f"{total_rows}개 시도 중 {success_count}개 성공, {error_count}개 실패", fg="green" if error_count == 0 else "red")
+            status_label.config(text=f"{total_rows}개 시도 중 {success_count}개 성공, {log_count}개 실패", fg="green" if log_count == 0 else "red")
 
         except Exception as e:
             status_label.config(text=f"파일 처리 오류: {str(e)}", fg="red")  # 오류 메시지 표시
+
+# 중복되는 주소 삭제
+#################################
+# 2025/01/21
+# ==문제==
+# 중복된 주소에 대한 처리가 없음
+# ==이전코드==
+# 새로운 코드 삽입
+#################################
+def delete_duplicate_df(dataframe):
+    #로그 저장할 변수 생성
+    log_msg = str()
+    #중복된 '읍면동', '지번' 열 내용을 가진 행 삭제
+    exclude_duplicate_df = dataframe.drop_duplicates(subset=['읍면동', '지번'])
+
+    #중복된 정보가 있었는지 체크, 있을 경우 로그 생성
+    if len(dataframe) != len(exclude_duplicate_df):
+        df_difference = dataframe[~dataframe['원래_행_번호'].isin(exclude_duplicate_df['원래_행_번호'])].원래_행_번호.to_list()
+        excluded_rows = ', '.join(map(str, df_difference))
+        log_msg = f"동일한 주소의 행을 생략했습니다, 메서드 : delete_duplicate_df, 생략된 원래 행 번호: {excluded_rows}"
+
+    #중복 여부와 상관없이 결과물 리턴
+    return exclude_duplicate_df, log_msg
 
 
 # 카카오 API를 통해 b_code 값 요청
