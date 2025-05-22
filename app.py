@@ -95,8 +95,28 @@ def save_as_pdf(location, url, save_directory):
         file_path = os.path.join(save_directory, filename)  # 파일 전체 경로
 
         try:
+            ## pdfkit의 옵션을 조정
+            ################################################################################
+            ## 2025/01/22
+            ## ==문제==
+            ## 옵션 추가, pdfkit.from_url의 options 인자에 넣을 값 생성
+            ## ==이전 코드==
+            ## 새로운 코드 삽입
+            ################################################################################
+            option = {
+                'enable-local-file-access': None,
+                'user-style-sheet':'eum_style.css',
+                'header-font-size':'7',
+                'header-left':'[date] [time]',
+                'zoom':'1.25'
+            }
+
             # pdfkit을 이용해 HTML 페이지를 PDF로 변환, configuration 인자 추가
-            pdfkit.from_url(url, file_path, configuration=config)
+            pdfkit.from_url(url, file_path, configuration=config, options = option)    ## 2025/01/22
+                                                                                       ## ==문제==
+                                                                                       ## 옵션 추가
+                                                                                       ## ==이전 코드==
+                                                                                       ## pdfkit.from_url(url, file_path, configuration=config)
         except Exception as e:
             raise Exception(f"PDF 저장 실패: {str(e)}")
     else:
@@ -209,13 +229,13 @@ def read_addresses_from_xls():
         except Exception as e:
             status_label.config(text=f"파일 처리 오류: {str(e)}", fg="red")  # 오류 메시지 표시
 
-# 중복되는 주소 삭제
+## 중복되는 주소 삭제
 #################################
-# 2025/01/21
-# ==문제==
-# 중복된 주소에 대한 처리가 없음
-# ==이전코드==
-# 새로운 코드 삽입
+## 2025/01/21
+## ==문제==
+## 중복된 주소에 대한 처리가 없음
+## ==이전코드==
+## 새로운 코드 삽입
 #################################
 def delete_duplicate_df(dataframe):
     #로그 저장할 변수 생성

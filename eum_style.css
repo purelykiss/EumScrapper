@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic&display=swap');
+
+.plan_pop .plan_tbl_w th {
+    font-family: 'Nanum Gothic', sans-serif !important;
+    font-size:15px !important;
+}
+
+.plan_pop .plan_tbl_w td {
+    font-family: 'Nanum Gothic', sans-serif !important;
+    font-size:13.75px !important;
+}
+
+.map_legend li{
+    font-family: 'Nanum Gothic', sans-serif !important;
+    font-size:13.75px !important;
+}
